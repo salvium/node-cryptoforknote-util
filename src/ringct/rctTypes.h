@@ -87,6 +87,8 @@ namespace rct {
     typedef std::vector<key> keyV; //vector of keys
     typedef std::vector<keyV> keyM; //matrix of keys (indexed by column first)
 
+  static key null_key = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  
     //containers For CT operations
     //if it's  representing a private ctkey then "dest" contains the secret key of the address
     // while "mask" contains a where C = aG + bH is CT pedersen commitment and b is the amount
@@ -385,7 +387,7 @@ namespace rct {
           FIELDS(maskSums[2])
             ar.end_array();
         }
-        if (p_r != crypto::null_pkey)
+        if (crypto_verify_32(p_r.bytes, null_key.bytes))
           FIELD(p_r)
         return ar.stream().good();
       }

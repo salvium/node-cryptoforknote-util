@@ -445,7 +445,7 @@ namespace cryptonote
 
     // SALVIUM-SPECIFIC FIELDS
     // TX type
-    cryptonote::salvium_transaction_type type;
+    cryptonote::salvium_transaction_type tx_type;
     // Return address
     crypto::public_key return_address;
     // Return TX public key
@@ -732,10 +732,10 @@ namespace cryptonote
         FIELD(vin)
         FIELD(vout)
         FIELD(extra)
-        VARINT_FIELD(type)
-        if (type != cryptonote::transaction_type::PROTOCOL) {
+        VARINT_FIELD(tx_type)
+        if (type != cryptonote::salvium_transaction_type::PROTOCOL) {
           VARINT_FIELD(amount_burnt)
-          if (type != cryptonote::transaction_type::MINER) {
+          if (type != cryptonote::salvium_transaction_type::MINER) {
             FIELD(return_address)
             FIELD(return_pubkey)
             FIELD(source_asset_type)
@@ -1115,7 +1115,7 @@ namespace cryptonote
         FIELD_N("parent_block", sbb);
       }
       FIELD(miner_tx)
-      if (blob_type == BLOB_TYPE_SALVIUM)
+      if (blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM)
       {
         FIELD(protocol_tx)
       }
