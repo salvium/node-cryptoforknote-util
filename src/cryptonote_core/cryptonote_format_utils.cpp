@@ -237,7 +237,7 @@ namespace cryptonote
       std::stringstream ss;
       binary_archive<true> ba(ss);
       const size_t inputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vin_zephyr.size() : t.vin.size();
-      const size_t outputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vout_zephyr.size() : t.blob_type != BLOB_TYPE_CRYPTONOTE_XHV ? t.vout.size() : t.vout_xhv.size();
+      const size_t outputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM ? t.vout_salvium.size() : t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vout_zephyr.size() : t.blob_type != BLOB_TYPE_CRYPTONOTE_XHV ? t.vout.size() : t.vout_xhv.size();
       size_t mixin;
       if (t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR) {
         mixin = t.vin_zephyr.empty() ? 0 : t.vin_zephyr[0].type() == typeid(txin_zephyr_key) ? boost::get<txin_zephyr_key>(t.vin_zephyr[0]).key_offsets.size() - 1 : 0;
@@ -285,7 +285,11 @@ namespace cryptonote
     }
     crypto::hash tree_root_hash = get_tx_tree_hash(b);
     blob.append(reinterpret_cast<const char*>(&tree_root_hash), sizeof(tree_root_hash));
-    blob.append(tools::get_varint_data(b.tx_hashes.size()+1));
+    if (b.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) {
+      blob.append(tools::get_varint_data(b.tx_hashes.size()+2));
+    } else {
+      blob.append(tools::get_varint_data(b.tx_hashes.size()+1));
+    }
     if (b.blob_type == BLOB_TYPE_CRYPTONOTE3) {
       blob.append(reinterpret_cast<const char*>(&b.uncle), sizeof(b.uncle));
     }

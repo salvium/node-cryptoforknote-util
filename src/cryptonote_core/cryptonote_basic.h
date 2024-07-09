@@ -48,7 +48,19 @@ namespace cryptonote
 
   typedef std::vector<crypto::signature> ring_signature;
 
-
+  enum salvium_transaction_type
+  {
+    UNSET = 0,
+    MINER = 1,
+    PROTOCOL = 2,
+    TRANSFER = 3,
+    CONVERT = 4,
+    BURN = 5,
+    STAKE = 6,
+    RETURN = 7,
+    MAX = 7
+  };
+  
   /* outputs */
 
   struct txout_to_script
@@ -163,6 +175,41 @@ namespace cryptonote
     BEGIN_SERIALIZE_OBJECT()
       FIELD(key)
       FIELD(asset_type)
+      FIELD(view_tag)
+    END_SERIALIZE()
+  };
+
+  // SALVIUM
+  struct txout_salvium_key
+  {
+    txout_salvium_key() { }
+    txout_salvium_key(const crypto::public_key &_key, const std::string &_asset_type, const uint64_t &_unlock_time) :
+      key(_key), asset_type(_asset_type), unlock_time(_unlock_time) { }
+    crypto::public_key key;
+    std::string asset_type;
+    uint64_t unlock_time;
+
+    BEGIN_SERIALIZE_OBJECT()
+      FIELD(key)
+      FIELD(asset_type)
+      VARINT_FIELD(unlock_time)
+    END_SERIALIZE()
+  };
+
+  struct txout_salvium_tagged_key
+  {
+    txout_salvium_tagged_key() { }
+    txout_salvium_tagged_key(const crypto::public_key &_key, const std::string &_asset_type, const uint64_t &_unlock_time, const crypto::view_tag &_view_tag) :
+      key(_key), asset_type(_asset_type), unlock_time(_unlock_time), view_tag(_view_tag) { }
+    crypto::public_key key;
+    std::string asset_type;
+    uint64_t unlock_time;
+    crypto::view_tag view_tag; // optimization to reduce scanning time
+
+    BEGIN_SERIALIZE_OBJECT()
+      FIELD(key)
+      FIELD(asset_type)
+      VARINT_FIELD(unlock_time)
       FIELD(view_tag)
     END_SERIALIZE()
   };
@@ -290,11 +337,28 @@ namespace cryptonote
     END_SERIALIZE()
   };
   
+  struct txin_salvium_key
+  {
+    uint64_t amount;
+    std::string asset_type;
+    std::vector<uint64_t> key_offsets;
+    crypto::key_image k_image;      // double spending protection
+
+    BEGIN_SERIALIZE_OBJECT()
+      VARINT_FIELD(amount)
+      FIELD(asset_type)
+      FIELD(key_offsets)
+      FIELD(k_image)
+    END_SERIALIZE()
+  };
+  
   typedef boost::variant<txin_gen, txin_to_script, txin_to_scripthash, txin_to_key, txin_offshore, txin_onshore, txin_xasset, txin_haven_key> txin_v;
   typedef boost::variant<txin_gen, txin_to_script, txin_to_scripthash, txin_zephyr_key> txin_zephyr_v;
+  typedef boost::variant<txin_gen, txin_to_script, txin_to_scripthash, txin_salvium_key> txin_salvium_v;
 
   typedef boost::variant<txout_to_script, txout_to_scripthash, txout_to_key, txout_to_tagged_key> txout_target_v;
   typedef boost::variant<txout_to_script, txout_to_scripthash, txout_to_key, txout_offshore, txout_xasset, txout_haven_key, txout_haven_tagged_key> txout_xhv_target_v;
+  typedef boost::variant<txout_to_script, txout_to_scripthash, txout_salvium_key, txout_salvium_tagged_key> txout_salvium_target_v;
 
   typedef boost::variant<txout_to_script, txout_to_scripthash, txout_zephyr_tagged_key> txout_stablero_target_v;
 
@@ -331,6 +395,17 @@ namespace cryptonote
     END_SERIALIZE()
   };
 
+  struct tx_out_salvium
+  {
+    uint64_t amount;
+    txout_salvium_target_v target;
+
+    BEGIN_SERIALIZE_OBJECT()
+      VARINT_FIELD(amount)
+      FIELD(target)
+    END_SERIALIZE()
+  };
+
 
   enum loki_version
   {
@@ -352,9 +427,11 @@ namespace cryptonote
 
     std::vector<txin_v> vin;
     std::vector<txin_zephyr_v> vin_zephyr;
+    std::vector<txin_salvium_v> vin_salvium;
     std::vector<tx_out> vout;
     std::vector<tx_out_xhv> vout_xhv;
     std::vector<tx_out_zephyr> vout_zephyr;
+    std::vector<tx_out_salvium> vout_salvium;
     //extra
     std::vector<uint8_t> extra;
     // Block height to use PR from
@@ -365,6 +442,23 @@ namespace cryptonote
     uint64_t amount_minted;
     std::vector<uint64_t> output_unlock_times;
     std::vector<uint32_t> collateral_indices;
+
+    // SALVIUM-SPECIFIC FIELDS
+    // TX type
+    cryptonote::salvium_transaction_type type;
+    // Return address
+    crypto::public_key return_address;
+    // Return TX public key
+    crypto::public_key return_pubkey;
+    // Source asset type
+    std::string source_asset_type;
+    // Destination asset type (this is only necessary for CONVERT transactions)
+    std::string destination_asset_type;
+    // Circulating supply information - already provided by Haven
+    //uint64_t amount_burnt;
+    // Slippage limit
+    uint64_t amount_slippage_limit;
+
 
     //
     // NOTE: Loki specific
@@ -629,7 +723,27 @@ namespace cryptonote
         VARINT_FIELD(pricing_record_height)
         VARINT_FIELD(amount_burnt)
         VARINT_FIELD(amount_minted)
-  
+
+      } else if (blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) {
+
+        VARINT_FIELD(version)
+        if(version == 0 || CURRENT_TRANSACTION_VERSION < version) return false;
+        VARINT_FIELD(unlock_time)
+        FIELD(vin)
+        FIELD(vout)
+        FIELD(extra)
+        VARINT_FIELD(type)
+        if (type != cryptonote::transaction_type::PROTOCOL) {
+          VARINT_FIELD(amount_burnt)
+          if (type != cryptonote::transaction_type::MINER) {
+            FIELD(return_address)
+            FIELD(return_pubkey)
+            FIELD(source_asset_type)
+            FIELD(destination_asset_type)
+            VARINT_FIELD(amount_slippage_limit)
+          }
+        }
+        
       } else {
   
         VARINT_FIELD(version)
@@ -987,10 +1101,11 @@ namespace cryptonote
     bytecoin_block parent_block;
 
     transaction miner_tx;
+    transaction protocol_tx;
     std::vector<crypto::hash> tx_hashes;
     mutable crypto::hash uncle = cryptonote::null_hash;
 
-    void set_blob_type(enum BLOB_TYPE bt) { miner_tx.blob_type = blob_type = bt; }
+    void set_blob_type(enum BLOB_TYPE bt) { miner_tx.blob_type = protocol_tx.blob_type = blob_type = bt; }
 
     BEGIN_SERIALIZE_OBJECT()
       FIELDS(*static_cast<block_header *>(this))
@@ -1000,6 +1115,10 @@ namespace cryptonote
         FIELD_N("parent_block", sbb);
       }
       FIELD(miner_tx)
+      if (blob_type == BLOB_TYPE_SALVIUM)
+      {
+        FIELD(protocol_tx)
+      }
       FIELD(tx_hashes)
       if (blob_type == BLOB_TYPE_CRYPTONOTE3)
       {
@@ -1067,8 +1186,10 @@ VARIANT_TAG(binary_archive, cryptonote::txin_haven_key, 0x6);
 VARIANT_TAG(binary_archive, cryptonote::txout_to_script, 0x0);
 VARIANT_TAG(binary_archive, cryptonote::txout_to_scripthash, 0x1);
 VARIANT_TAG(binary_archive, cryptonote::txout_to_key, 0x2);
+VARIANT_TAG(binary_archive, cryptonote::txout_salvium_key, 0x2);
 VARIANT_TAG(binary_archive, cryptonote::txout_zephyr_tagged_key, 0x2);
 VARIANT_TAG(binary_archive, cryptonote::txout_to_tagged_key, 0x3);
+VARIANT_TAG(binary_archive, cryptonote::txout_salvium_tagged_key, 0x3);
 VARIANT_TAG(binary_archive, cryptonote::txout_offshore, 0x3);
 VARIANT_TAG(binary_archive, cryptonote::txout_xasset, 0x5);
 VARIANT_TAG(binary_archive, cryptonote::txout_haven_key, 0x6);
