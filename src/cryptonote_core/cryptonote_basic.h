@@ -1180,6 +1180,7 @@ VARIANT_TAG(binary_archive, cryptonote::txin_to_scripthash, 0x1);
 VARIANT_TAG(binary_archive, cryptonote::txin_to_key, 0x2);
 VARIANT_TAG(binary_archive, cryptonote::txin_zephyr_key, 0x2);
 VARIANT_TAG(binary_archive, cryptonote::txin_offshore, 0x3);
+VARIANT_TAG(binary_archive, cryptonote::txin_salvium_key, 0x2);
 VARIANT_TAG(binary_archive, cryptonote::txin_onshore, 0x4);
 VARIANT_TAG(binary_archive, cryptonote::txin_xasset, 0x5);
 VARIANT_TAG(binary_archive, cryptonote::txin_haven_key, 0x6);
