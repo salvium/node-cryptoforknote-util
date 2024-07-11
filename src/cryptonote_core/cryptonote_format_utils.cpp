@@ -382,6 +382,7 @@ namespace cryptonote
   {
     std::stringstream ss;
     ss << b_blob;
+    LOG_ERROR(ss.str());
     binary_archive<false> ba(ss);
     bool r = ::serialization::serialize(ba, b);
     CHECK_AND_ASSERT_MES(r, false, "Failed to parse block from blob 1");
