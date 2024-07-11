@@ -137,7 +137,7 @@ NAN_METHOD(convert_blob) { // (parentBlockBuffer, cnBlobType)
     blobdata input = std::string(Buffer::Data(target), Buffer::Length(target));
     blobdata output = "";
 
-    enum BLOB_TYPE blob_type = BLOB_TYPE_CRYPTONOTE;
+    enum BLOB_TYPE blob_type = BLOB_TYPE_CRYPTONOTE_SALVIUM;
     if (info.Length() >= 2) {
         if (!info[1]->IsNumber()) return THROW_ERROR_EXCEPTION("Argument 2 should be a number");
         blob_type = static_cast<enum BLOB_TYPE>(Nan::To<int>(info[1]).FromMaybe(0));
@@ -145,7 +145,7 @@ NAN_METHOD(convert_blob) { // (parentBlockBuffer, cnBlobType)
 
     block b = AUTO_VAL_INIT(b);
     b.set_blob_type(blob_type);
-    if (!parse_and_validate_block_from_blob(input, b)) return THROW_ERROR_EXCEPTION("Failed to parse block 2 " + blob_type);
+    if (!parse_and_validate_block_from_blob(input, b)) return THROW_ERROR_EXCEPTION("Failed to parse block 2");
 
     if (blob_type == BLOB_TYPE_FORKNOTE2) {
         block parent_block;
@@ -168,7 +168,7 @@ NAN_METHOD(get_block_id) {
 
     blobdata input = std::string(Buffer::Data(target), Buffer::Length(target));
 
-    enum BLOB_TYPE blob_type = BLOB_TYPE_CRYPTONOTE;
+    enum BLOB_TYPE blob_type = BLOB_TYPE_CRYPTONOTE_SALVIUM;
     if (info.Length() >= 2) {
         if (!info[1]->IsNumber()) return THROW_ERROR_EXCEPTION("Argument 2 should be a number");
         blob_type = static_cast<enum BLOB_TYPE>(Nan::To<int>(info[1]).FromMaybe(0));
@@ -195,7 +195,7 @@ NAN_METHOD(construct_block_blob) { // (parentBlockTemplateBuffer, nonceBuffer, c
 
     if (!Buffer::HasInstance(block_template_buf) || !Buffer::HasInstance(nonce_buf)) return THROW_ERROR_EXCEPTION("Both arguments should be buffer objects.");
 
-    enum BLOB_TYPE blob_type = BLOB_TYPE_CRYPTONOTE;
+    enum BLOB_TYPE blob_type = BLOB_TYPE_CRYPTONOTE_SALVIUM;
     if (info.Length() >= 3) {
         if (!info[2]->IsNumber()) return THROW_ERROR_EXCEPTION("Argument 3 should be a number");
         blob_type = static_cast<enum BLOB_TYPE>(Nan::To<int>(info[2]).FromMaybe(0));

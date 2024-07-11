@@ -220,8 +220,8 @@ namespace cryptonote
     {
       std::stringstream ss;
       binary_archive<true> ba(ss);
-      const size_t inputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM ? t.vin_salvium.size() : BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vin_zephyr.size() : t.vin.size();
-      const size_t outputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM ? t.vout_salvium.size() : t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vout_zephyr.size() : t.blob_type != BLOB_TYPE_CRYPTONOTE_XHV ? t.vout.size() : t.vout_xhv.size();
+      const size_t inputs = (t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) ? t.vin_salvium.size() : (t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR) ? t.vin_zephyr.size() : t.vin.size();
+      const size_t outputs = (t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) ? t.vout_salvium.size() : (t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR) ? t.vout_zephyr.size() : t.blob_type != BLOB_TYPE_CRYPTONOTE_XHV ? t.vout.size() : t.vout_xhv.size();
       bool r = false;
       if (t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM)
         r = tt.rct_signatures.serialize_rctsig_base_salvium(ba, inputs, outputs);
@@ -243,8 +243,8 @@ namespace cryptonote
     {
       std::stringstream ss;
       binary_archive<true> ba(ss);
-      const size_t inputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM ? t.vin_salvium.size() : BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vin_zephyr.size() : t.vin.size();
-      const size_t outputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM ? t.vout_salvium.size() : t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vout_zephyr.size() : t.blob_type != BLOB_TYPE_CRYPTONOTE_XHV ? t.vout.size() : t.vout_xhv.size();
+      const size_t inputs = (t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) ? t.vin_salvium.size() : (t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR) ? t.vin_zephyr.size() : t.vin.size();
+      const size_t outputs = (t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) ? t.vout_salvium.size() : (t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR) ? t.vout_zephyr.size() : t.blob_type != BLOB_TYPE_CRYPTONOTE_XHV ? t.vout.size() : t.vout_xhv.size();
       size_t mixin;
       if (t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) {
         mixin = t.vin_salvium.empty() ? 0 : t.vin_salvium[0].type() == typeid(txin_salvium_key) ? boost::get<txin_salvium_key>(t.vin_salvium[0]).key_offsets.size() - 1 : 0;
@@ -382,7 +382,6 @@ namespace cryptonote
   {
     std::stringstream ss;
     ss << b_blob;
-    LOG_ERROR(ss.str());
     binary_archive<false> ba(ss);
     bool r = ::serialization::serialize(ba, b);
     CHECK_AND_ASSERT_MES(r, false, "Failed to parse block from blob 1");
