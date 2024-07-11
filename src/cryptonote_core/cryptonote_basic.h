@@ -727,15 +727,15 @@ namespace cryptonote
       } else if (blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) {
 
         VARINT_FIELD(version)
-        if(version == 0 || CURRENT_TRANSACTION_VERSION < version) return false;
+        if(version == 0/* || CURRENT_TRANSACTION_VERSION < version*/) return false;
         VARINT_FIELD(unlock_time)
         FIELD(vin_salvium)
         FIELD(vout_salvium)
         FIELD(extra)
         VARINT_FIELD(tx_type)
-        if (type != cryptonote::salvium_transaction_type::PROTOCOL) {
+        if (tx_type != cryptonote::salvium_transaction_type::PROTOCOL) {
           VARINT_FIELD(amount_burnt)
-          if (type != cryptonote::salvium_transaction_type::MINER) {
+          if (tx_type != cryptonote::salvium_transaction_type::MINER) {
             FIELD(return_address)
             FIELD(return_pubkey)
             FIELD(source_asset_type)
@@ -897,8 +897,10 @@ namespace cryptonote
     version = 0;
     unlock_time = 0;
     vin.clear();
+    vin_salvium.clear();
     vin_zephyr.clear();
     vout.clear();
+    vout_salvium.clear();
     vout_xhv.clear();
     vout_zephyr.clear();
     extra.clear();
@@ -909,6 +911,15 @@ namespace cryptonote
     amount_minted = 0;
     output_unlock_times.clear();
     collateral_indices.clear();
+
+    // Salvium-specific fields
+    type = cryptonote::salvium_transaction_type::UNSET;
+    return_address = null_pkey;
+    return_pubkey = null_pkey;
+    source_asset_type.clear();
+    destination_asset_type.clear();
+    //amount_burnt = 0;
+    amount_slippage_limit = 0;
   }
 
   inline
@@ -924,6 +935,7 @@ namespace cryptonote
       size_t operator()(const txin_onshore& txin) const {return txin.key_offsets.size();}
       size_t operator()(const txin_xasset& txin) const {return txin.key_offsets.size();}
       size_t operator()(const txin_haven_key& txin) const {return txin.key_offsets.size();}
+      size_t operator()(const txin_salvium_key& txin) const {return txin.key_offsets.size();}
       size_t operator()(const txin_zephyr_key& txin) const {return txin.key_offsets.size();}
     };
 
