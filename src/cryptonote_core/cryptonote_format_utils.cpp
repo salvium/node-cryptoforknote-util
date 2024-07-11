@@ -222,7 +222,14 @@ namespace cryptonote
       binary_archive<true> ba(ss);
       const size_t inputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM ? t.vin_salvium.size() : BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vin_zephyr.size() : t.vin.size();
       const size_t outputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM ? t.vout_salvium.size() : t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vout_zephyr.size() : t.blob_type != BLOB_TYPE_CRYPTONOTE_XHV ? t.vout.size() : t.vout_xhv.size();
-      bool r = tt.rct_signatures.serialize_rctsig_base(ba, inputs, outputs);
+      bool r = false;
+      if (t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM)
+        r = tt.rct_signatures.serialize_rctsig_base_salvium(ba, inputs, outputs);
+      if (t.blob_type == BLOB_TYPE_CRYPTONOTE_XHV || t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR)
+        r = tt.rct_signatures.serialize_rctsig_base_haven(ba, inputs, outputs);
+      else
+        r = tt.rct_signatures.serialize_rctsig_base(ba, inputs, outputs);
+        
       CHECK_AND_ASSERT_MES(r, false, "Failed to serialize rct signatures base");
       cryptonote::get_blob_hash(ss.str(), hashes[1]);
     }
