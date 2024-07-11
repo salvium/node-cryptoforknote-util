@@ -729,8 +729,8 @@ namespace cryptonote
         VARINT_FIELD(version)
         if(version == 0 || CURRENT_TRANSACTION_VERSION < version) return false;
         VARINT_FIELD(unlock_time)
-        FIELD(vin)
-        FIELD(vout)
+        FIELD(vin_salvium)
+        FIELD(vout_salvium)
         FIELD(extra)
         VARINT_FIELD(tx_type)
         if (type != cryptonote::salvium_transaction_type::PROTOCOL) {
