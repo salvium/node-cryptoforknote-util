@@ -100,7 +100,9 @@ static bool fillExtraMM(cryptonote::block& block1, const cryptonote::block& bloc
 }
 
 static bool mergeBlocks(const cryptonote::block& block1, cryptonote::block& block2, const std::vector<crypto::hash>& branch2) {
-    block2.timestamp = block1.timestamp;
+  return false;
+  /*
+  block2.timestamp = block1.timestamp;
     block2.parent_block.major_version = block1.major_version;
     block2.parent_block.minor_version = block1.minor_version;
     block2.parent_block.prev_id       = block1.prev_id;
@@ -114,9 +116,12 @@ static bool mergeBlocks(const cryptonote::block& block1, cryptonote::block& bloc
     tree_branch(transactionHashes.data(), transactionHashes.size(), block2.parent_block.miner_tx_branch.data());
     block2.parent_block.blockchain_branch = branch2;
     return true;
+  */
 }
 
 static bool construct_parent_block(const cryptonote::block& b, cryptonote::block& parent_block) {
+  return false;
+  /*
     parent_block.major_version = 1;
     parent_block.minor_version = 0;
     parent_block.timestamp = b.timestamp;
@@ -125,6 +130,7 @@ static bool construct_parent_block(const cryptonote::block& b, cryptonote::block
     parent_block.miner_tx.version = CURRENT_TRANSACTION_VERSION;
     parent_block.miner_tx.unlock_time = 0;
     return fillExtra(parent_block, b);
+  */
 }
 
 NAN_METHOD(convert_blob) { // (parentBlockBuffer, cnBlobType)
@@ -137,7 +143,7 @@ NAN_METHOD(convert_blob) { // (parentBlockBuffer, cnBlobType)
     blobdata input = std::string(Buffer::Data(target), Buffer::Length(target));
     blobdata output = "";
 
-    enum BLOB_TYPE blob_type = BLOB_TYPE_CRYPTONOTE_SALVIUM;
+    enum BLOB_TYPE blob_type = BLOB_TYPE_CRYPTONOTE;
     if (info.Length() >= 2) {
         if (!info[1]->IsNumber()) return THROW_ERROR_EXCEPTION("Argument 2 should be a number");
         blob_type = static_cast<enum BLOB_TYPE>(Nan::To<int>(info[1]).FromMaybe(0));
@@ -146,14 +152,7 @@ NAN_METHOD(convert_blob) { // (parentBlockBuffer, cnBlobType)
     block b = AUTO_VAL_INIT(b);
     b.set_blob_type(blob_type);
     if (!parse_and_validate_block_from_blob(input, b)) return THROW_ERROR_EXCEPTION("Failed to parse block 2");
-
-    if (blob_type == BLOB_TYPE_FORKNOTE2) {
-        block parent_block;
-        if (!construct_parent_block(b, parent_block)) return THROW_ERROR_EXCEPTION("convert_blob: Failed to construct parent block");
-        if (!get_block_hashing_blob(parent_block, output)) return THROW_ERROR_EXCEPTION("convert_blob: Failed to create mining block");
-    } else {
-        if (!get_block_hashing_blob(b, output)) return THROW_ERROR_EXCEPTION("convert_blob: Failed to create mining block");
-    }
+    if (!get_block_hashing_blob(b, output)) return THROW_ERROR_EXCEPTION("convert_blob: Failed to create mining block");
 
     v8::Local<v8::Value> returnValue = Nan::CopyBuffer((char*)output.data(), output.size()).ToLocalChecked();
     info.GetReturnValue().Set(returnValue);
@@ -168,7 +167,7 @@ NAN_METHOD(get_block_id) {
 
     blobdata input = std::string(Buffer::Data(target), Buffer::Length(target));
 
-    enum BLOB_TYPE blob_type = BLOB_TYPE_CRYPTONOTE_SALVIUM;
+    enum BLOB_TYPE blob_type = BLOB_TYPE_CRYPTONOTE;
     if (info.Length() >= 2) {
         if (!info[1]->IsNumber()) return THROW_ERROR_EXCEPTION("Argument 2 should be a number");
         blob_type = static_cast<enum BLOB_TYPE>(Nan::To<int>(info[1]).FromMaybe(0));
@@ -195,7 +194,7 @@ NAN_METHOD(construct_block_blob) { // (parentBlockTemplateBuffer, nonceBuffer, c
 
     if (!Buffer::HasInstance(block_template_buf) || !Buffer::HasInstance(nonce_buf)) return THROW_ERROR_EXCEPTION("Both arguments should be buffer objects.");
 
-    enum BLOB_TYPE blob_type = BLOB_TYPE_CRYPTONOTE_SALVIUM;
+    enum BLOB_TYPE blob_type = BLOB_TYPE_CRYPTONOTE;
     if (info.Length() >= 3) {
         if (!info[2]->IsNumber()) return THROW_ERROR_EXCEPTION("Argument 3 should be a number");
         blob_type = static_cast<enum BLOB_TYPE>(Nan::To<int>(info[2]).FromMaybe(0));
@@ -212,31 +211,6 @@ NAN_METHOD(construct_block_blob) { // (parentBlockTemplateBuffer, nonceBuffer, c
     if (!parse_and_validate_block_from_blob(block_template_blob, b)) return THROW_ERROR_EXCEPTION("Failed to parse block");
 
     b.nonce = nonce;
-    if (blob_type == BLOB_TYPE_FORKNOTE2) {
-        block parent_block;
-        b.parent_block.nonce = nonce;
-        if (!construct_parent_block(b, parent_block)) return THROW_ERROR_EXCEPTION("Failed to construct parent block");
-        if (!mergeBlocks(parent_block, b, std::vector<crypto::hash>())) return THROW_ERROR_EXCEPTION("Failed to postprocess mining block");
-    }
-
-    if (blob_type == BLOB_TYPE_CRYPTONOTE_XTNC || blob_type == BLOB_TYPE_CRYPTONOTE_CUCKOO) {
-        if (info.Length() != 4) return THROW_ERROR_EXCEPTION("You must provide 4 arguments.");
-        Local<Array> cycle = Local<Array>::Cast(info[3]);
-        for (int i = 0; i < 32; i++ ) b.cycle.data[i] = cycle->Get(isolate->GetCurrentContext(), i).ToLocalChecked()->NumberValue(isolate->GetCurrentContext()).ToChecked();
-    }
-
-    if (blob_type == BLOB_TYPE_CRYPTONOTE_TUBE) {
-        if (info.Length() != 4) return THROW_ERROR_EXCEPTION("You must provide 4 arguments.");
-        Local<Array> cycle = Local<Array>::Cast(info[3]);
-        for (int i = 0; i < 40; i++ ) b.cycle40.data[i] = cycle->Get(isolate->GetCurrentContext(), i).ToLocalChecked()->NumberValue(isolate->GetCurrentContext()).ToChecked();
-    }
-
-    if (blob_type == BLOB_TYPE_CRYPTONOTE_XTA) {
-        if (info.Length() != 4) return THROW_ERROR_EXCEPTION("You must provide 4 arguments.");
-        Local<Array> cycle = Local<Array>::Cast(info[3]);
-        for (int i = 0; i < 48; i++ ) b.cycle48.data[i] = cycle->Get(isolate->GetCurrentContext(), i).ToLocalChecked()->NumberValue(isolate->GetCurrentContext()).ToChecked();
-    }
-
     if (!block_to_blob(b, output)) return THROW_ERROR_EXCEPTION("Failed to convert block to blob");
 
     v8::Local<v8::Value> returnValue = Nan::CopyBuffer((char*)output.data(), output.size()).ToLocalChecked();
@@ -329,12 +303,11 @@ NAN_METHOD(construct_mm_parent_block_blob) { // (parentBlockTemplate, blob_type,
     block b = AUTO_VAL_INIT(b);
     b.set_blob_type(blob_type);
     if (!parse_and_validate_block_from_blob(input, b)) return THROW_ERROR_EXCEPTION("construct_mm_parent_block_blob: Failed to parse prent block");
-    if (blob_type == BLOB_TYPE_CRYPTONOTE_LOKI || blob_type == BLOB_TYPE_CRYPTONOTE_XTNC) b.miner_tx.version = cryptonote::loki_version_2;
   
     block b2 = AUTO_VAL_INIT(b2);
     b2.set_blob_type(BLOB_TYPE_FORKNOTE2);
     if (!parse_and_validate_block_from_blob(child_input, b2)) return THROW_ERROR_EXCEPTION("construct_mm_parent_block_blob: Failed to parse child block");
-
+ 
     if (!fillExtraMM(b, b2)) return THROW_ERROR_EXCEPTION("construct_mm_parent_block_blob: Failed to add merged mining tag to parent block extra");
 
     blobdata output = "";
