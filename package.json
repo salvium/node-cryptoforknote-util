@@ -7,7 +7,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/haven-protocol-org/node-cryptoforknote-util.git"
+    "url": "https://github.com/somerandomcryptoguy/node-cryptoforknote-util.git"
   },
   "dependencies": {
     "base58-native": "*",

@@ -220,8 +220,8 @@ namespace cryptonote
     {
       std::stringstream ss;
       binary_archive<true> ba(ss);
-      const size_t inputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM ? t.vin_salvium.size() : BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vin_zephyr.size() : t.vin.size();
-      const size_t outputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM ? t.vout_salvium.size() : t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vout_zephyr.size() : t.blob_type != BLOB_TYPE_CRYPTONOTE_XHV ? t.vout.size() : t.vout_xhv.size();
+      const size_t inputs = t.vin.size();
+      const size_t outputs = t.vout.size();
       bool r = tt.rct_signatures.serialize_rctsig_base(ba, inputs, outputs);
       CHECK_AND_ASSERT_MES(r, false, "Failed to serialize rct signatures base");
       cryptonote::get_blob_hash(ss.str(), hashes[1]);
@@ -236,24 +236,9 @@ namespace cryptonote
     {
       std::stringstream ss;
       binary_archive<true> ba(ss);
-      const size_t inputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM ? t.vin_salvium.size() : BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vin_zephyr.size() : t.vin.size();
-      const size_t outputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM ? t.vout_salvium.size() : t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vout_zephyr.size() : t.blob_type != BLOB_TYPE_CRYPTONOTE_XHV ? t.vout.size() : t.vout_xhv.size();
-      size_t mixin;
-      if (t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) {
-        mixin = t.vin_salvium.empty() ? 0 : t.vin_salvium[0].type() == typeid(txin_salvium_key) ? boost::get<txin_salvium_key>(t.vin_salvium[0]).key_offsets.size() - 1 : 0;
-      } else if (t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR) {
-        mixin = t.vin_zephyr.empty() ? 0 : t.vin_zephyr[0].type() == typeid(txin_zephyr_key) ? boost::get<txin_zephyr_key>(t.vin_zephyr[0]).key_offsets.size() - 1 : 0;
-      } else if (t.blob_type == BLOB_TYPE_CRYPTONOTE_XHV) {
-        mixin = t.vin.empty() ? 0 :
-          t.vin[0].type() == typeid(txin_to_key) ? boost::get<txin_to_key>(t.vin[0]).key_offsets.size() - 1 :
-          t.vin[0].type() == typeid(txin_offshore) ? boost::get<txin_offshore>(t.vin[0]).key_offsets.size() - 1 :
-          t.vin[0].type() == typeid(txin_onshore) ? boost::get<txin_onshore>(t.vin[0]).key_offsets.size() - 1 :
-          t.vin[0].type() == typeid(txin_xasset) ? boost::get<txin_xasset>(t.vin[0]).key_offsets.size() - 1 :
-          t.vin[0].type() == typeid(txin_haven_key) ? boost::get<txin_haven_key>(t.vin[0]).key_offsets.size() - 1 :
-          0;
-      } else {
-        mixin = t.vin.empty() ? 0 : t.vin[0].type() == typeid(txin_to_key) ? boost::get<txin_to_key>(t.vin[0]).key_offsets.size() - 1 : 0;
-      }
+      const size_t inputs = t.vin.size();
+      const size_t outputs = t.vout.size();
+      size_t mixin = t.vin.empty() ? 0 : t.vin[0].type() == typeid(txin_to_key) ? boost::get<txin_to_key>(t.vin[0]).key_offsets.size() - 1 : 0;
       bool r = tt.rct_signatures.p.serialize_rctsig_prunable(ba, t.rct_signatures.type, inputs, outputs, mixin);
       CHECK_AND_ASSERT_MES(r, false, "Failed to serialize rct signatures prunable");
       cryptonote::get_blob_hash(ss.str(), hashes[2]);
@@ -276,35 +261,20 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool get_block_hashing_blob(const block& b, blobdata& blob)
   {
-    if (b.blob_type == BLOB_TYPE_CRYPTONOTE_XTNC || b.blob_type == BLOB_TYPE_CRYPTONOTE_CUCKOO || b.blob_type == BLOB_TYPE_CRYPTONOTE_TUBE || b.blob_type == BLOB_TYPE_CRYPTONOTE_XTA) {
-      blob = t_serializable_object_to_blob(b.major_version);
-      blob.append(reinterpret_cast<const char*>(&b.minor_version), sizeof(b.minor_version));
-      blob.append(reinterpret_cast<const char*>(&b.timestamp), sizeof(b.timestamp));
-      blob.append(reinterpret_cast<const char*>(&b.prev_id), sizeof(b.prev_id));
-    }
-    else {
-      blob = t_serializable_object_to_blob(static_cast<const block_header&>(b));
-    }
+    blob = t_serializable_object_to_blob(static_cast<const block_header&>(b));
     crypto::hash tree_root_hash = get_tx_tree_hash(b);
     blob.append(reinterpret_cast<const char*>(&tree_root_hash), sizeof(tree_root_hash));
-    if (b.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) {
-      blob.append(tools::get_varint_data(b.tx_hashes.size()+2));
-    } else {
-      blob.append(tools::get_varint_data(b.tx_hashes.size()+1));
-    }
-    if (b.blob_type == BLOB_TYPE_CRYPTONOTE3) {
-      blob.append(reinterpret_cast<const char*>(&b.uncle), sizeof(b.uncle));
-    }
-    if (b.blob_type == BLOB_TYPE_CRYPTONOTE_CUCKOO || b.blob_type == BLOB_TYPE_CRYPTONOTE_TUBE || b.blob_type == BLOB_TYPE_CRYPTONOTE_XTA) {
-      blob.append(reinterpret_cast<const char*>(&b.nonce8), sizeof(b.nonce8));
-    }
+    blob.append(tools::get_varint_data(b.tx_hashes.size()+1));
     return true;
   }
   //---------------------------------------------------------------
   bool get_bytecoin_block_hashing_blob(const block& b, blobdata& blob)
   {
+    return false;
+    /*
     auto sbb = make_serializable_bytecoin_block(b, true, true);
     return t_serializable_object_to_blob(sbb, blob);
+    */
   }
   //---------------------------------------------------------------
   bool get_block_hash(const block& b, crypto::hash& res)
@@ -312,17 +282,6 @@ namespace cryptonote
     blobdata blob;
     if (!get_block_hashing_blob(b, blob))
       return false;
-
-    if (b.blob_type == BLOB_TYPE_FORKNOTE2)
-    {
-      blobdata parent_blob;
-      auto sbb = make_serializable_bytecoin_block(b, true, false);
-      if (!t_serializable_object_to_blob(sbb, parent_blob))
-        return false;
-
-      blob.append(parent_blob);
-    }
-
     return get_object_hash(blob, res);
   }
   //---------------------------------------------------------------
@@ -360,15 +319,6 @@ namespace cryptonote
       res[i] -= res[i-1];
 
     return res;
-  }
-  //---------------------------------------------------------------
-  bool get_bytecoin_block_longhash(const block& b, crypto::hash& res)
-  {
-    blobdata bd;
-    if(!get_bytecoin_block_hashing_blob(b, bd))
-      return false;
-    crypto::cn_slow_hash(bd.data(), bd.size(), res);
-    return true;
   }
   //---------------------------------------------------------------
   bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b)
