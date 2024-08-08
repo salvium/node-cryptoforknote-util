@@ -15,8 +15,7 @@
 #include "serialization/vector.h"
 #include "serialization/binary_archive.h"
 #include "serialization/crypto.h"
-#include "serialization/pricing_record.h"
-#include "serialization/keyvalue_serialization.h" // eepe named serialization
+#include "serialization/keyvalue_serialization.h" // epee named serialization
 #include "string_tools.h"
 #include "cryptonote_config.h"
 #include "crypto/crypto.h"
@@ -25,7 +24,6 @@
 #include "tx_extra.h"
 #include "ringct/rctTypes.h"
 #include "cryptonote_protocol/blobdatatype.h"
-#include "offshore/pricing_record.h"
 
 
 namespace cryptonote
@@ -368,7 +366,6 @@ namespace cryptonote
     uint64_t timestamp;
     crypto::hash prev_id;
     uint32_t nonce;
-    offshore::pricing_record pricing_record;
 
     BEGIN_SERIALIZE()
       VARINT_FIELD(major_version)
