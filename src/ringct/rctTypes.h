@@ -317,7 +317,7 @@ namespace rct {
       key p_r;
       
       rctSigBase() :
-          type(RCTTypeNull), message{}, mixRing{}, pseudoOuts{}, ecdhInfo{}, outPk{}, txnFee(0)
+        type(RCTTypeNull), message{}, mixRing{}, pseudoOuts{}, ecdhInfo{}, outPk{}, txnFee(0), p_r{}
       {}
       
       template<bool W, template <bool> class Archive>

@@ -215,7 +215,7 @@ namespace cryptonote
 
     BEGIN_SERIALIZE()
       VARINT_FIELD(version)
-      if(version == 0/* || CURRENT_TRANSACTION_VERSION < version*/) return false;
+      if(version == 0 || CURRENT_TRANSACTION_VERSION < version) return false;
       VARINT_FIELD(unlock_time)
       FIELD(vin)
       FIELD(vout)
@@ -433,7 +433,7 @@ namespace cryptonote
 
 }
 
-BLOB_SERIALIZER(cryptonote::txout_to_key);
+//BLOB_SERIALIZER(cryptonote::txout_to_key);
 BLOB_SERIALIZER(cryptonote::txout_to_scripthash);
 
 VARIANT_TAG(binary_archive, cryptonote::txin_gen, 0xff);
