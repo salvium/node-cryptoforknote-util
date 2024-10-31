@@ -264,7 +264,11 @@ namespace cryptonote
     blob = t_serializable_object_to_blob(static_cast<const block_header&>(b));
     crypto::hash tree_root_hash = get_tx_tree_hash(b);
     blob.append(reinterpret_cast<const char*>(&tree_root_hash), sizeof(tree_root_hash));
-    blob.append(tools::get_varint_data(b.tx_hashes.size()+1));
+    if (b.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) {
+      blob.append(tools::get_varint_data(b.tx_hashes.size() + (b.major_version >= HF_VERSION_ENABLE_N_OUTS ? 2 : 1)));
+    } else {
+      blob.append(tools::get_varint_data(b.tx_hashes.size() + 1));
+    }
     return true;
   }
   //---------------------------------------------------------------

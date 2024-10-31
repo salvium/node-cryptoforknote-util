@@ -1,6 +1,7 @@
 #pragma once
 
 #define CURRENT_TRANSACTION_VERSION      2
+#define HF_VERSION_ENABLE_N_OUTS         2
 
 #define PRICING_RECORD_VALID_TIME_DIFF_FROM_BLOCK       120  // seconds
 
