@@ -226,7 +226,7 @@ namespace cryptonote
       if (type != cryptonote::salvium_transaction_type::PROTOCOL) {
         VARINT_FIELD(amount_burnt)
         if (type != cryptonote::salvium_transaction_type::MINER) {
-          if (type == cryptonote::transaction_type::TRANSFER && version >= TRANSACTION_VERSION_N_OUTS) {
+          if (type == cryptonote::salvium_transaction_type::TRANSFER && version >= TRANSACTION_VERSION_N_OUTS) {
             FIELD(return_address_list)
             FIELD(return_address_change_mask)
           } else {
