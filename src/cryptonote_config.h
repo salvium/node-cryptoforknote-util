@@ -2,6 +2,7 @@
 
 #define CURRENT_TRANSACTION_VERSION      2
 #define HF_VERSION_ENABLE_N_OUTS         2
+#define TRANSACTION_VERSION_N_OUTS       3
 
 #define PRICING_RECORD_VALID_TIME_DIFF_FROM_BLOCK       120  // seconds
 
