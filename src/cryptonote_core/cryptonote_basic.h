@@ -24,6 +24,7 @@
 #include "tx_extra.h"
 #include "ringct/rctTypes.h"
 #include "cryptonote_protocol/blobdatatype.h"
+#include "cryptonote_protocol/enums.h"
 
 
 namespace cryptonote
@@ -44,19 +45,6 @@ namespace cryptonote
 
   typedef std::vector<crypto::signature> ring_signature;
 
-  enum salvium_transaction_type
-  {
-    UNSET = 0,
-    MINER = 1,
-    PROTOCOL = 2,
-    TRANSFER = 3,
-    CONVERT = 4,
-    BURN = 5,
-    STAKE = 6,
-    RETURN = 7,
-    MAX = 7
-  };
-  
   /* outputs */
 
   struct txout_to_script

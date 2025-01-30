@@ -1,4 +1,5 @@
 // Copyright (c) 2016, Monero Research Labs
+// Portions Copyright (c) 2023-2025, Salvium (author: SRCG)
 //
 // Author: Shen Noether <shen.noether@gmx.com>
 //
@@ -52,6 +53,7 @@ extern "C" {
 #include "serialization/vector.h"
 #include "serialization/binary_archive.h"
 
+#include "cryptonote_protocol/enums.h"
 
 //Define this flag when debugging to get additional info on the console
 #ifdef DBG
@@ -67,6 +69,7 @@ extern "C" {
 
 //Namespace specifically for ring ct code
 namespace rct {
+
     //basic ops containers
     typedef unsigned char * Bytes;
 
@@ -305,7 +308,8 @@ namespace rct {
       RCTTypeBulletproof2 = 4,
       RCTTypeCLSAG = 5,
       RCTTypeBulletproofPlus = 6,
-      RCTTypeFullProofs = 7
+      RCTTypeFullProofs = 7,
+      RCTTypeSalviumOne = 8
     };
     enum RangeProofType { RangeProofBorromean, RangeProofBulletproof, RangeProofMultiOutputBulletproof, RangeProofPaddedBulletproof };
     struct RCTConfig {
@@ -318,6 +322,49 @@ namespace rct {
         VARINT_FIELD(bp_version)
       END_SERIALIZE()
     };
+    enum SalviumDataType { SalviumNormal=0, SalviumAudit=1 };
+    struct salvium_input_data_t {
+      crypto::key_derivation aR;
+      xmr_amount amount;
+      size_t i;
+      uint8_t origin_tx_type;
+      crypto::key_derivation aR_stake;
+      size_t i_stake;
+      
+      BEGIN_SERIALIZE_OBJECT()
+        FIELD(aR)
+        VARINT_FIELD(amount)
+        VARINT_FIELD(i)
+        VARINT_FIELD(origin_tx_type)
+        if (origin_tx_type != cryptonote::salvium_transaction_type::UNSET) {
+          FIELD(aR_stake)
+          FIELD(i_stake)
+        }
+      END_SERIALIZE()
+    };
+    struct salvium_data_t {
+
+      uint8_t salvium_data_type; // flag to indicate what type of data is valid
+      zk_proof pr_proof; // p_r 
+      zk_proof sa_proof; // spend authority proof
+      zk_proof cz_proof; // change is zero proof
+      std::vector<salvium_input_data_t> input_verification_data;
+      crypto::public_key spend_pubkey;
+      std::string enc_view_privkey_str;
+
+      BEGIN_SERIALIZE_OBJECT()
+        VARINT_FIELD(salvium_data_type)
+        FIELD(pr_proof)
+        FIELD(sa_proof)
+        if (salvium_data_type == SalviumAudit)
+        {
+          FIELD(cz_proof)
+          FIELD(input_verification_data)
+          FIELD(spend_pubkey)
+          FIELD(enc_view_privkey_str)
+        }
+      END_SERIALIZE()
+    };
     struct rctSigBase {
       uint8_t type;
       key message;
@@ -328,11 +375,10 @@ namespace rct {
       ctkeyV outPk;
       xmr_amount txnFee = 0; // contains b
       key p_r;
-      zk_proof pr_proof; // p_r 
-      zk_proof sa_proof; // spend authority proof
+      salvium_data_t salvium_data;
       
       rctSigBase() :
-        type(RCTTypeNull), message{}, mixRing{}, pseudoOuts{}, ecdhInfo{}, outPk{}, txnFee(0), p_r{}, pr_proof{}, sa_proof{}
+        type(RCTTypeNull), message{}, mixRing{}, pseudoOuts{}, ecdhInfo{}, outPk{}, txnFee(0), p_r{}, salvium_data{}
       {}
       
       template<bool W, template <bool> class Archive>
@@ -341,7 +387,7 @@ namespace rct {
         FIELD(type)
         if (type == RCTTypeNull)
           return ar.stream().good();
-        if (type != RCTTypeFull && type != RCTTypeSimple && type != RCTTypeBulletproof && type != RCTTypeBulletproof2 && type != RCTTypeCLSAG && type != RCTTypeBulletproofPlus && type != RCTTypeFullProofs)
+        if (type != RCTTypeFull && type != RCTTypeSimple && type != RCTTypeBulletproof && type != RCTTypeBulletproof2 && type != RCTTypeCLSAG && type != RCTTypeBulletproofPlus && type != RCTTypeFullProofs && type != RCTTypeSalviumOne)
           return false;
         VARINT_FIELD(txnFee)
         // inputs/outputs not saved, only here for serialization help
@@ -354,7 +400,7 @@ namespace rct {
           return false;
         for (size_t i = 0; i < outputs; ++i)
         {
-            if (type == RCTTypeBulletproof2 || type == RCTTypeCLSAG || type == RCTTypeBulletproofPlus || type == RCTTypeFullProofs)
+            if (type == RCTTypeBulletproof2 || type == RCTTypeCLSAG || type == RCTTypeBulletproofPlus || type == RCTTypeFullProofs || type == RCTTypeSalviumOne)
             {
               // Since RCTTypeBulletproof2 enote types, we don't serialize the blinding factor, and only serialize the
               // first 8 bytes of ecdhInfo[i].amount
@@ -388,10 +434,14 @@ namespace rct {
         ar.end_array();
 
         FIELD(p_r)
-        if (type == RCTTypeFullProofs)
+        if (type == RCTTypeSalviumOne)
         {
-          FIELD(pr_proof)
-          FIELD(sa_proof)
+          FIELD(salvium_data)
+        }
+        else if (type == RCTTypeFullProofs)
+        {
+          FIELD(salvium_data.pr_proof)
+          FIELD(salvium_data.sa_proof)
         }
         return ar.stream().good();
       }
@@ -405,9 +455,14 @@ namespace rct {
           FIELD(outPk)
           VARINT_FIELD(txnFee)
           FIELD(p_r)
-          if (type == RCTTypeFullProofs) {
-            FIELD(pr_proof)
-            FIELD(sa_proof)
+          if (type == RCTTypeSalviumOne)
+          {
+            FIELD(salvium_data)
+          }
+          else if (type == RCTTypeFullProofs)
+          {
+            FIELD(salvium_data.pr_proof)
+            FIELD(salvium_data.sa_proof)
           }
         END_SERIALIZE()
     };
@@ -431,9 +486,9 @@ namespace rct {
             return false;
           if (type == RCTTypeNull)
             return ar.stream().good();
-          if (type != RCTTypeFull && type != RCTTypeSimple && type != RCTTypeBulletproof && type != RCTTypeBulletproof2 && type != RCTTypeCLSAG && type != RCTTypeBulletproofPlus && type != RCTTypeFullProofs)
+          if (type != RCTTypeFull && type != RCTTypeSimple && type != RCTTypeBulletproof && type != RCTTypeBulletproof2 && type != RCTTypeCLSAG && type != RCTTypeBulletproofPlus && type != RCTTypeFullProofs && type != RCTTypeSalviumOne)
             return false;
-          if (type == RCTTypeBulletproofPlus || type == RCTTypeFullProofs)
+          if (type == RCTTypeBulletproofPlus || type == RCTTypeFullProofs || type == RCTTypeSalviumOne)
           {
             uint32_t nbp = bulletproofs_plus.size();
             VARINT_FIELD(nbp)
@@ -490,7 +545,7 @@ namespace rct {
             ar.end_array();
           }
 
-          if (type == RCTTypeCLSAG || type == RCTTypeBulletproofPlus || type == RCTTypeFullProofs)
+          if (type == RCTTypeCLSAG || type == RCTTypeBulletproofPlus || type == RCTTypeFullProofs || type == RCTTypeSalviumOne)
           {
             ar.tag("CLSAGs");
             ar.begin_array();
@@ -581,7 +636,7 @@ namespace rct {
             }
             ar.end_array();
           }
-          if (type == RCTTypeBulletproof || type == RCTTypeBulletproof2 || type == RCTTypeCLSAG || type == RCTTypeBulletproofPlus || type == RCTTypeFullProofs)
+          if (type == RCTTypeBulletproof || type == RCTTypeBulletproof2 || type == RCTTypeCLSAG || type == RCTTypeBulletproofPlus || type == RCTTypeFullProofs || type == RCTTypeSalviumOne)
           {
             ar.tag("pseudoOuts");
             ar.begin_array();
@@ -790,5 +845,7 @@ VARIANT_TAG(binary_archive, rct::multisig_out, 0x9e);
 VARIANT_TAG(binary_archive, rct::clsag, 0x9f);
 VARIANT_TAG(binary_archive, rct::BulletproofPlus, 0xa0);
 VARIANT_TAG(binary_archive, rct::zk_proof, 0xa1);
+VARIANT_TAG(binary_archive, rct::salvium_input_data_t, 0xa2);
+VARIANT_TAG(binary_archive, rct::salvium_data_t, 0xa3);
 
 #endif  /* RCTTYPES_H */
