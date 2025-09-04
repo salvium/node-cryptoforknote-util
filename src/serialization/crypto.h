@@ -11,6 +11,8 @@
 #include "crypto/crypto.h"
 #include "crypto/hash.h"
 
+#include "carrot_core/core_types.h"
+
 // read
 template <template <bool> class Archive>
 bool do_serialize(Archive<false> &ar, std::vector<crypto::signature> &v)
@@ -62,3 +64,6 @@ BLOB_SERIALIZER(crypto::key_derivation);
 BLOB_SERIALIZER(crypto::key_image);
 BLOB_SERIALIZER(crypto::signature);
 BLOB_SERIALIZER(crypto::view_tag);
+
+BLOB_SERIALIZER(carrot::view_tag_t);
+BLOB_SERIALIZER(carrot::janus_anchor_t);
