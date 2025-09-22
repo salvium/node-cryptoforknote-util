@@ -1,6 +1,6 @@
 #pragma once
 
-#define CURRENT_TRANSACTION_VERSION      2
+#define CURRENT_TRANSACTION_VERSION      4
 #define HF_VERSION_ENABLE_N_OUTS         2
 #define TRANSACTION_VERSION_N_OUTS       3
 #define TRANSACTION_VERSION_CARROT       4
