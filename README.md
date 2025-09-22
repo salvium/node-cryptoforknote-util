@@ -4,7 +4,7 @@ Node-CryptoForkNote-Util with Merged Mining support
 Installing locally and testing
 -----
 ```
-npm install https://github.com/MoneroOcean/node-cryptoforknote-util
+npm install https://github.com/salvium/node-cryptoforknote-util
 ```
 
 Dependencies
