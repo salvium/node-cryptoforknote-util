@@ -205,6 +205,99 @@ namespace cryptonote
     END_SERIALIZE()
   };
 
+  struct erc_token_t
+  {
+    uint8_t version;
+    std::string contract_address;
+    std::string lockbox_address;
+    std::string ticker;
+    uint64_t erc20_asset_id; // NOTE: this is NOT the Salvium `asset_type_id`!!!
+
+    BEGIN_SERIALIZE_OBJECT()
+      VARINT_FIELD(version)
+      FIELD(contract_address)
+      FIELD(lockbox_address)
+      FIELD(ticker)
+      VARINT_FIELD(erc20_asset_id)
+    END_SERIALIZE()
+
+    BEGIN_KV_SERIALIZE_MAP()
+      KV_SERIALIZE(contract_address)
+      KV_SERIALIZE(lockbox_address)
+      KV_SERIALIZE(ticker)
+      KV_SERIALIZE(erc20_asset_id)
+    END_KV_SERIALIZE_MAP()
+  };
+
+  struct sal_token_t
+  {
+    uint8_t version;
+    uint64_t supply;
+    uint64_t size;
+    std::string name;
+    std::string url;
+    crypto::hash signature;
+
+    BEGIN_SERIALIZE_OBJECT()
+      VARINT_FIELD(version)
+      VARINT_FIELD(supply)
+      VARINT_FIELD(size)
+      FIELD(name)
+      FIELD(url)
+      FIELD(signature)
+    END_SERIALIZE()
+
+    BEGIN_KV_SERIALIZE_MAP()
+      KV_SERIALIZE(supply)
+      KV_SERIALIZE(size)
+      KV_SERIALIZE(name)
+      KV_SERIALIZE(url)
+    END_KV_SERIALIZE_MAP()
+  };
+
+  #define TOKEN_TYPE_UNSET 0
+  #define TOKEN_TYPE_ERC20 1
+  #define TOKEN_TYPE_SAL   2 
+
+  typedef boost::variant<erc_token_t, sal_token_t> token_v;
+  
+  struct token_metadata_t
+  {
+    uint8_t version;
+    std::string asset_type;
+    token_v token;
+
+    BEGIN_SERIALIZE_OBJECT()
+      VARINT_FIELD(version)
+      FIELD(asset_type)
+      FIELD(token)
+    END_SERIALIZE()
+  };
+
+  class layer2_rollup_tx_t {
+  public:
+    crypto::hash tx_prefix_hash;
+    crypto::key_image first_key_image;
+    uint64_t tx_fee;
+
+    BEGIN_SERIALIZE_OBJECT()
+      FIELD(tx_prefix_hash)
+      FIELD(first_key_image)
+      VARINT_FIELD(tx_fee)
+    END_SERIALIZE()
+  };
+
+  class layer2_rollup_data_t {
+  public:
+    uint8_t version;
+    std::vector<layer2_rollup_tx_t> txs;
+
+    BEGIN_SERIALIZE_OBJECT()
+      VARINT_FIELD(version)
+      FIELD(txs)
+    END_SERIALIZE()
+  };
+
   class transaction_prefix
   {
 
@@ -238,8 +331,13 @@ namespace cryptonote
     uint64_t amount_burnt;
     // Slippage limit
     uint64_t amount_slippage_limit;
+
     protocol_tx_data_t protocol_tx_data;
 
+    carrot::rollup_binding_tag_t rollup_binding_tag;
+    token_metadata_t token_metadata;
+    layer2_rollup_data_t layer2_rollup_data;
+    
     BEGIN_SERIALIZE()
       VARINT_FIELD(version)
       if(version == 0 || CURRENT_TRANSACTION_VERSION < version) return false;
@@ -247,28 +345,40 @@ namespace cryptonote
       FIELD(vin)
       FIELD(vout)
       FIELD(extra)
-      VARINT_FIELD(type)
-      if (type != cryptonote::salvium_transaction_type::UNSET &&
-          type != cryptonote::salvium_transaction_type::PROTOCOL) {
+      if (blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) {
+        VARINT_FIELD(type)
+        if (type != cryptonote::salvium_transaction_type::UNSET &&
+            type != cryptonote::salvium_transaction_type::PROTOCOL) {
 
-        VARINT_FIELD(amount_burnt)
-        if (type != cryptonote::salvium_transaction_type::MINER) {
-          if (type == cryptonote::salvium_transaction_type::TRANSFER && version >= TRANSACTION_VERSION_N_OUTS) {
-            FIELD(return_address_list)
-            FIELD(return_address_change_mask)
-          } else {
-            if (type == cryptonote::salvium_transaction_type::STAKE &&
-                version >= TRANSACTION_VERSION_CARROT)
-            {
-              FIELD(protocol_tx_data)
+          VARINT_FIELD(amount_burnt)
+          if (type != cryptonote::salvium_transaction_type::MINER) {
+            if (type == cryptonote::salvium_transaction_type::TRANSFER && version >= TRANSACTION_VERSION_N_OUTS) {
+              FIELD(return_address_list)
+              FIELD(return_address_change_mask)
             } else {
-              FIELD(return_address)
-              FIELD(return_pubkey)
+              if ((type == cryptonote::salvium_transaction_type::STAKE || type == cryptonote::salvium_transaction_type::CREATE_TOKEN) &&
+                  version >= TRANSACTION_VERSION_CARROT) {
+                FIELD(protocol_tx_data)
+              } else {
+                FIELD(return_address)
+                FIELD(return_pubkey)
+              }
             }
+            FIELD(source_asset_type)
+            FIELD(destination_asset_type)
+            VARINT_FIELD(amount_slippage_limit)
           }
-          FIELD(source_asset_type)
-          FIELD(destination_asset_type)
-          VARINT_FIELD(amount_slippage_limit)
+        }
+        if (version < TRANSACTION_VERSION_ENABLE_TOKENS) {
+          return true;
+        }
+        if (type == cryptonote::salvium_transaction_type::CREATE_TOKEN) {
+          FIELD(token_metadata)
+        } else if (type == cryptonote::salvium_transaction_type::TRANSFER) {
+          FIELD(rollup_binding_tag)
+        } else if (type == cryptonote::salvium_transaction_type::ROLLUP) {
+          FIELD(rollup_binding_tag)
+          FIELD(layer2_rollup_data)
         }
       }
     END_SERIALIZE()
@@ -384,6 +494,9 @@ namespace cryptonote
     destination_asset_type.clear();
     amount_burnt = 0;
     amount_slippage_limit = 0;
+    rollup_binding_tag = {0};
+    token_metadata = {};
+    layer2_rollup_data = {};
   }
 
   inline
@@ -502,5 +615,9 @@ VARIANT_TAG(binary_archive, cryptonote::txout_to_scripthash, 0x1);
 VARIANT_TAG(binary_archive, cryptonote::txout_to_key, 0x2);
 VARIANT_TAG(binary_archive, cryptonote::txout_to_tagged_key, 0x3);
 VARIANT_TAG(binary_archive, cryptonote::txout_to_carrot_v1, 0x4);
+VARIANT_TAG(binary_archive, cryptonote::protocol_tx_data_t, 0x0);
+VARIANT_TAG(binary_archive, cryptonote::token_metadata_t, 0x0);
+VARIANT_TAG(binary_archive, cryptonote::erc_token_t, 0x0);
+VARIANT_TAG(binary_archive, cryptonote::sal_token_t, 0x1);
 VARIANT_TAG(binary_archive, cryptonote::transaction, 0xcc);
 VARIANT_TAG(binary_archive, cryptonote::block, 0xbb);

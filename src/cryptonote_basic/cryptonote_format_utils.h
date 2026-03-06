@@ -80,7 +80,20 @@ namespace cryptonote
   bool parse_and_validate_block_from_blob(const blobdata& b_blob, block& b);
   std::map<std::string, uint64_t> get_outs_money_amount(const transaction& tx);
   bool check_outs_valid(const transaction& tx);
-
+  /*
+  std::string asset_type_from_id(const uint32_t asset_type_id);
+  uint32_t asset_id_from_type(const std::string asset_type);
+  bool is_valid_custom_asset_type(const std::string& asset_type);
+  bool is_valid_asset_type(const std::string& asset_type);
+  bool is_asset_type_token(const std::string& asset_type);
+  uint64_t get_token_creation_price(const std::string& ticker);
+  bool get_tx_asset_types(const transaction& tx, const crypto::hash &txid, std::string& source, std::string& destination, const bool is_miner_tx);
+  bool get_output_public_key(const cryptonote::tx_out& out, crypto::public_key& output_public_key);
+  boost::optional<crypto::view_tag> get_output_view_tag(const cryptonote::tx_out& out);
+  bool get_output_asset_type(const cryptonote::tx_out& out, std::string& output_asset_type);
+  bool get_output_unlock_time(const cryptonote::tx_out& out, uint64_t& output_unlock_time);
+  bool check_inputs_types_supported(const transaction& tx);
+  */
   std::vector<uint64_t> relative_output_offsets_to_absolute(const std::vector<uint64_t>& off);
   std::vector<uint64_t> absolute_output_offsets_to_relative(const std::vector<uint64_t>& off);
   //---------------------------------------------------------------
